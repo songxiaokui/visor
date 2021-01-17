@@ -58,11 +58,14 @@ func stringFormat(psInfo string) string {
 		if v == "" {
 			continue
 		} else {
-			d := strings.ReplaceAll(v, "  ", " ")
-			for t := 0; t <= 4; t++ {
-				d = strings.ReplaceAll(d, "  ", " ")
+			for {
+				if strings.Contains(v, "  ") {
+					v = strings.ReplaceAll(v, "  ", " ")
+				} else {
+					break
+				}
 			}
-			dataList := strings.Split(d, " ")
+			dataList := strings.Split(v, " ")
 			user := dataList[0]
 			pid := dataList[1]
 			c := dataList[2]
