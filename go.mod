@@ -1,4 +1,4 @@
-module github.com/TomatoMr/visor
+module github.com/songxiaokui/visor
 
 go 1.13
 

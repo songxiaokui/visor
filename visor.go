@@ -1,13 +1,16 @@
 package main
 
 import (
-	"github.com/TomatoMr/visor/config"
+	"bytes"
+	"fmt"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
+	"github.com/songxiaokui/visor/config"
 	"gopkg.in/gomail.v2"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -15,7 +18,7 @@ func visorCpu() {
 	for {
 		per, _ := cpu.Percent(time.Duration(config.GetConfig().Interval)*time.Second, false)
 		if per[0] > config.GetConfig().AlterLimit {
-			record()
+			recordTop10()
 		}
 	}
 }
@@ -24,7 +27,7 @@ func visorMem() {
 	for {
 		m, _ := mem.VirtualMemory()
 		if m.UsedPercent > config.GetConfig().AlterLimit {
-			record()
+			recordTop10()
 		}
 		time.Sleep(time.Duration(config.GetConfig().Interval) * time.Second)
 	}
@@ -44,6 +47,69 @@ func record() {
 	topOutput, _ := topCmd.Output()
 	f.Write(topOutput)
 	SendMail("你服务器炸了", string(topOutput), config.GetConfig())
+}
+
+func stringFormat(psInfo string) string {
+	// PID CPU MEM TIME COMMAND
+	data := strings.Split(psInfo, "\n")
+	outPut := ""
+	for i := 0; i < len(data)-1; i++ {
+		v := data[i]
+		if v == "" {
+			continue
+		} else {
+			d := strings.ReplaceAll(v, "  ", " ")
+			for t := 0; t <= 4; t++ {
+				d = strings.ReplaceAll(d, "  ", " ")
+			}
+			dataList := strings.Split(d, " ")
+			user := dataList[0]
+			pid := dataList[1]
+			c := dataList[2]
+			m := dataList[3]
+			command := strings.Join(dataList[10:], " ")
+			group := fmt.Sprintf("\t|%s \t|%s \t|%s \t|%s \t|%s \r\n",
+				user, pid, c, m, command)
+			outPut += group
+			outPut += "\r\n"
+		}
+	}
+	return outPut
+}
+
+func recordTop10() {
+	now := time.Now().Format("2006-01-02-15-04-05")
+	logFile := config.GetConfig().SnapPath + now + ".log"
+	f, _ := os.Create(logFile)
+	defer f.Close()
+	// ps aux --sort -rss 输出
+	topCmd := exec.Command("ps", "aux", "--sort=-rss")
+	headCmd := exec.Command("head", "-10")
+	var outPutTop bytes.Buffer
+	topCmd.Stdout = &outPutTop
+	if err := topCmd.Start(); err != nil {
+		return
+	}
+	if err := topCmd.Wait(); err != nil {
+		return
+	}
+	// 输入
+	headCmd.Stdin = &outPutTop
+	var headCmdOut bytes.Buffer
+	headCmd.Stdout = &headCmdOut
+
+	if err := headCmd.Start(); err != nil {
+		return
+	}
+	if err := headCmd.Wait(); err != nil {
+		return
+	}
+	// 写入邮件中排名前10的进程
+	out := stringFormat(string(headCmdOut.Bytes()))
+	m, _ := mem.VirtualMemory()
+	subject := fmt.Sprintf("农林大学-生产环境: 爆炸了！内存: %.2f", m.UsedPercent)
+	SendMail(subject, out, config.GetConfig())
+	f.Write([]byte(out))
 }
 
 func SendMail(subject string, body string, conf config.Config) error {

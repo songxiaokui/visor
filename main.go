@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/TomatoMr/visor/config"
+	"github.com/songxiaokui/visor/config"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -72,7 +72,10 @@ func Stop() {
 	cmd := exec.Command("kill", "-9", string(pid))
 	cmd.Start()
 	fmt.Println("kill ", string(pid))
+	// 直接杀死
 	os.Remove(config.GetConfig().Pid) //清除pid
+	kl := exec.Command("kill", "-9", string(pid))
+	kl.Start()
 	os.Exit(0)
 }
 
@@ -84,3 +87,13 @@ func Restart() {
 	start := exec.Command(os.Args[0], "-start", "-d")
 	start.Start()
 }
+
+/*
+mkdir config
+vi config/config.yaml 编写配置
+使用:
+chmod +x visor
+visor -start -config=./config/config.yaml -d
+退出:
+visor -stop
+*/
