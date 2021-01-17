@@ -96,4 +96,7 @@ chmod +x visor
 visor -start -config=./config/config.yaml -d
 退出:
 visor -stop
+
+在mac上混合编译为linux运行代码:
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 */
