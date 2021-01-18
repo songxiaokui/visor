@@ -51,6 +51,14 @@ func record() {
 
 func stringFormat(psInfo string) string {
 	// PID CPU MEM TIME COMMAND
+	// delete " "
+	for {
+		if strings.Contains(psInfo, "  ") {
+			psInfo = strings.ReplaceAll(psInfo, "  ", " ")
+		} else {
+			break
+		}
+	}
 	data := strings.Split(psInfo, "\n")
 	outPut := ""
 	for i := 0; i < len(data)-1; i++ {
@@ -58,13 +66,6 @@ func stringFormat(psInfo string) string {
 		if v == "" {
 			continue
 		} else {
-			for {
-				if strings.Contains(v, "  ") {
-					v = strings.ReplaceAll(v, "  ", " ")
-				} else {
-					break
-				}
-			}
 			dataList := strings.Split(v, " ")
 			user := dataList[0]
 			pid := dataList[1]
