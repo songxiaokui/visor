@@ -11,14 +11,33 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
+
+var (
+	// 存储的上次发送的时间
+	storyTime atomic.Value
+	on        sync.Once
+)
+
+// 每小时发送一次
+func init() {
+	on.Do(func() {
+		storyTime.Store(time.Now().Add(time.Hour * -1))
+	})
+}
 
 func visorCpu() {
 	for {
 		per, _ := cpu.Percent(time.Duration(config.GetConfig().Interval)*time.Second, false)
 		if per[0] > config.GetConfig().AlterLimit {
-			recordTop10()
+			if time.Now().Sub(storyTime.Load().(time.Time)).Hours() >= 1 {
+				recordTop10()
+				storyTime.Store(time.Now())
+			}
+
 		}
 	}
 }
@@ -27,7 +46,10 @@ func visorMem() {
 	for {
 		m, _ := mem.VirtualMemory()
 		if m.UsedPercent > config.GetConfig().AlterLimit {
-			recordTop10()
+			if time.Now().Sub(storyTime.Load().(time.Time)).Hours() >= 1 {
+				recordTop10()
+				storyTime.Store(time.Now())
+			}
 		}
 		time.Sleep(time.Duration(config.GetConfig().Interval) * time.Second)
 	}
